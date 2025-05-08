@@ -6,6 +6,12 @@ import timeGridPlugin from "@fullcalendar/timegrid";
 import { DateSelectArg, EventClickArg, EventApi } from "@fullcalendar/core";
 import interactionPlugin from "@fullcalendar/interaction";
 
+enum Priority {
+  LOW = 1,
+  MEDIUM = 2,
+  HIGH = 3,
+}
+
 interface DialogBoxProps {
   isOpen: boolean;
   onClose: () => void;
@@ -18,6 +24,8 @@ interface EventViewProps {
   handleSubmit: (e: React.FormEvent) => void;
   isEditing: boolean;
   onDelete?: () => void;
+  priority: Priority; // Add this
+  setPriority: React.Dispatch<React.SetStateAction<Priority>>; // Add this
 }
 
 export default function Calendar() {
@@ -27,6 +35,7 @@ export default function Calendar() {
   const [selectedDate, setSelectedDate] = useState<DateSelectArg | null>(null);
   const [clickedEvent, setClickedEvent] = useState<EventClickArg | null>(null);
   const [isEditing, setIsEditing] = useState(false);
+  const [priority, setPriority] = useState<Priority>(Priority.LOW);
 
   // Get the events from local storage
   useEffect(() => {
@@ -73,11 +82,12 @@ export default function Calendar() {
     calendarApi.unselect();
 
     const newEvent = {
-      id: `${Date.now()}-${eventTitle}`, // Using timestamp for unique ID
+      id: `${Date.now()}-${eventTitle}`,
       title: eventTitle,
       start: selectedDate.startStr,
       end: selectedDate.endStr,
       allDay: selectedDate.allDay,
+      priority: priority, // Add priority to the event
     };
 
     calendarApi.addEvent(newEvent);
@@ -89,6 +99,7 @@ export default function Calendar() {
     if (!eventTitle || !clickedEvent) return;
 
     clickedEvent.event.setProp("title", eventTitle);
+    clickedEvent.event.setProp("priority", priority); // Update priority
     handleCloseDialog();
   };
 
@@ -156,6 +167,8 @@ export default function Calendar() {
             handleSubmit={isEditing ? handleUpdateEvent : handleAddEvent}
             isEditing={isEditing}
             onDelete={isEditing ? handleDeleteEvent : undefined}
+            priority={priority}
+            setPriority={setPriority}
           />
         </DialogBox>
       )}
@@ -186,6 +199,8 @@ const EventView: React.FC<EventViewProps> = ({
   handleSubmit,
   isEditing,
   onDelete,
+  priority,
+  setPriority,
 }) => {
   return (
     <form onSubmit={handleSubmit}>
@@ -203,6 +218,20 @@ const EventView: React.FC<EventViewProps> = ({
             required
           />
         </label>
+
+        <label className="block mb-4">
+          Priority:
+          <select
+            value={priority}
+            onChange={(e) => setPriority(Number(e.target.value) as Priority)}
+            className="border rounded-md p-2 w-full"
+          >
+            <option value={Priority.LOW}>Low</option>
+            <option value={Priority.MEDIUM}>Medium</option>
+            <option value={Priority.HIGH}>High</option>
+          </select>
+        </label>
+
         <div className="flex justify-end gap-2">
           {isEditing && onDelete && (
             <button
