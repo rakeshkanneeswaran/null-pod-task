@@ -1,5 +1,8 @@
+# server.py
+
 from fastapi import FastAPI, Request
 from prisma import Prisma
+from services.event_services import EventServices
 import uvicorn
 
 app = FastAPI()
@@ -18,48 +21,24 @@ async def shutdown():
 
 @app.get("/events")
 async def get_events():
-    events = await db.calendarevent.find_many()
-    return events
+    return await EventServices.get_all_events(db)
 
 
 @app.post("/events")
 async def create_event(request: Request):
     data = await request.json()
-    print("Received data:", data)
-
-    event = await db.calendarevent.create(
-        data={
-            "id": data["id"],
-            "title": data["title"],
-            "start": data["start"],
-            "end": data["end"],
-            "allDay": data["allDay"],
-            "priority": data["priority"],
-        }
-    )
-    return event
+    return await EventServices.create_event(db, data)
 
 
 @app.post("/events/update/{event_id}")
 async def update_event(event_id: str, request: Request):
     data = await request.json()
-    updated = await db.calendarevent.update(
-        where={"id": event_id},
-        data={
-            "title": data.get("title"),
-            "start": data.get("start"),
-            "end": data.get("end"),
-            "allDay": data.get("allDay"),
-            "priority": data.get("priority"),
-        },
-    )
-    return updated
+    return await EventServices.update_event(db, event_id, data)
 
 
 @app.delete("/events/{event_id}")
 async def delete_event(event_id: str):
-    deleted = await db.calendarevent.delete(where={"id": event_id})
-    return deleted
+    return await EventServices.delete_event(db, event_id)
 
 
 if __name__ == "__main__":
