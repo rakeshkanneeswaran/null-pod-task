@@ -1,5 +1,5 @@
 "use client";
-import Calendar from "@/components/Calander";
+import Calendar from "@/app/components/Calander";
 import React from "react";
 
 export default function page() {
