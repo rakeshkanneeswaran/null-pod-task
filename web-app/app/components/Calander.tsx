@@ -30,6 +30,7 @@ export default function Calendar() {
 
   const sortedEvents = React.useMemo(() => {
     const events = [...currentEvents];
+
     if (sortBy === "date") {
       return events.sort((a, b) => {
         const dateA = a.start ? new Date(a.start.toString()).getTime() : 0;
@@ -44,6 +45,25 @@ export default function Calendar() {
       });
     }
   }, [currentEvents, sortBy]);
+
+  React.useEffect(() => {
+    const updateAllEvents = async () => {
+      await Promise.all(
+        currentEvents.map((event) =>
+          updateEvent(event.id, {
+            id: event.id,
+            title: event.title,
+            start: event.start ? event.start.toISOString() : undefined,
+            end: event.end ? event.end.toISOString() : undefined,
+            allDay: event.allDay,
+            priority: event.extendedProps?.priority || Priority.LOW,
+          })
+        )
+      );
+    };
+
+    updateAllEvents();
+  }, [currentEvents]);
 
   useEffect(() => {
     const fetchEvents = async () => {
@@ -145,6 +165,7 @@ export default function Calendar() {
   };
 
   const handleUpdateEvent = async (e: React.FormEvent) => {
+    console.log("updaate event called");
     e.preventDefault();
     if (!eventTitle || !clickedEvent) return;
 
