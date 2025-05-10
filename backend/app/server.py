@@ -21,18 +21,22 @@ async def shutdown():
 
 @app.get("/events")
 async def get_events():
-    return await EventServices.get_all_events(db)
+    data = await EventServices.get_all_events(db)
+    print(data)
+    return data
 
 
 @app.post("/events")
 async def create_event(request: Request):
     data = await request.json()
+
     return await EventServices.create_event(db, data)
 
 
 @app.post("/events/update/{event_id}")
 async def update_event(event_id: str, request: Request):
     data = await request.json()
+    print(data)
     return await EventServices.update_event(db, event_id, data)
 
 

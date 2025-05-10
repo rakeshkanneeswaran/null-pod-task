@@ -3,6 +3,7 @@
 
 import { EventService } from '@/data-core/services/event-service';
 
+
 export type CalendarEvent = {
     id: string;
     title: string;
@@ -25,7 +26,11 @@ export async function createEvent(event: CalendarEvent): Promise<CalendarEvent> 
 export async function updateEvent(
     id: string,
     event: Partial<CalendarEvent>
-): Promise<CalendarEvent> {
+): Promise<CalendarEvent | null> {
+    if (!id) {
+        return null
+    }
+    console.log("Updating event with ID:", id);
     const response = await EventService.updateEvent(id, event);
     return response;
 }

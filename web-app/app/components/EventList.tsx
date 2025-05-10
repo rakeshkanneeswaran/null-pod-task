@@ -15,22 +15,31 @@ export const EventList: React.FC<EventListProps> = ({
   onSortChange,
 }) => {
   return (
-    <div className="w-full sm:w-full lg:w-3/12 bg-white rounded-xl shadow-md p-4 lg:p-6 h-fit lg:sticky lg:top-4 mb-6 lg:mb-0">
-      <h2 className="text-2xl font-bold text-gray-800 pb-4 border-b border-gray-200">
-        Calendar Events
-      </h2>
-
-      <SortControls sortBy={sortBy} onSortChange={onSortChange} />
-
-      {events.length === 0 ? (
-        <EmptyState />
-      ) : (
-        <div className="space-y-3">
-          {events.map((event, index) => (
-            <EventItem key={index} event={event} />
-          ))}
+    <div className="w-full bg-white rounded-xl shadow-md p-4 lg:p-6 h-fit lg:sticky lg:top-4">
+      <div className="flex flex-col h-full">
+        {/* Header */}
+        <div className="pb-4 border-b border-gray-200">
+          <h2 className="text-xl font-bold text-gray-800">Calendar Events</h2>
         </div>
-      )}
+
+        {/* Sort Controls */}
+        <div className="mt-4 mb-4">
+          <SortControls sortBy={sortBy} onSortChange={onSortChange} />
+        </div>
+
+        {/* Events List */}
+        <div className="flex-1 overflow-y-auto">
+          {events.length === 0 ? (
+            <EmptyState />
+          ) : (
+            <div className="space-y-3 pr-2">
+              {events.map((event, index) => (
+                <EventItem key={index} event={event} />
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 };
@@ -39,11 +48,11 @@ const SortControls: React.FC<{
   sortBy: SortBy;
   onSortChange: (sortBy: SortBy) => void;
 }> = ({ sortBy, onSortChange }) => (
-  <div className="mb-6 mt-4">
+  <div className="mb-4">
     <label className="block text-sm font-medium text-gray-700 mb-2">
       Sort by:
     </label>
-    <div className="flex flex-wrap gap-3">
+    <div className="flex gap-2">
       <SortButton
         active={sortBy === "date"}
         onClick={() => onSortChange("date")}
@@ -65,9 +74,9 @@ const SortButton: React.FC<{
 }> = ({ active, onClick, label }) => (
   <button
     onClick={onClick}
-    className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
+    className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors flex-1 ${
       active
-        ? "bg-blue-600 text-white shadow-md"
+        ? "bg-blue-600 text-white shadow-sm"
         : "bg-gray-100 text-gray-700 hover:bg-gray-200"
     }`}
   >
@@ -76,11 +85,11 @@ const SortButton: React.FC<{
 );
 
 const EmptyState: React.FC = () => (
-  <div className="text-center py-6">
-    <div className="text-gray-400 mb-2">
+  <div className="text-center py-8 flex flex-col items-center justify-center h-full">
+    <div className="text-gray-400 mb-3">
       <svg
         xmlns="http://www.w3.org/2000/svg"
-        className="h-12 w-12 mx-auto"
+        className="h-10 w-10 mx-auto"
         fill="none"
         viewBox="0 0 24 24"
         stroke="currentColor"
@@ -93,7 +102,7 @@ const EmptyState: React.FC = () => (
         />
       </svg>
     </div>
-    <p className="text-gray-500 italic">No events scheduled</p>
+    <p className="text-gray-500 text-sm">No events scheduled</p>
   </div>
 );
 
@@ -116,12 +125,14 @@ const EventItem: React.FC<{ event: CalendarEvent }> = ({ event }) => {
 
   return (
     <div
-      className={`p-4 rounded-lg border transition-all hover:shadow-md ${priorityClass}`}
+      className={`p-3 rounded-lg border transition-all hover:shadow-sm ${priorityClass}`}
     >
-      <div className="flex justify-between items-start">
-        <h3 className="font-medium text-gray-800">{event.title}</h3>
+      <div className="flex justify-between items-start gap-2">
+        <h3 className="font-medium text-gray-800 text-sm line-clamp-2 flex-1">
+          {event.title}
+        </h3>
         <span
-          className={`text-xs px-2 py-1 rounded-full font-semibold ${priorityLabel.class}`}
+          className={`text-xs px-2 py-1 rounded-full font-semibold whitespace-nowrap ${priorityLabel.class}`}
         >
           {priorityLabel.text}
         </span>
@@ -132,27 +143,23 @@ const EventItem: React.FC<{ event: CalendarEvent }> = ({ event }) => {
 };
 
 const EventDateRange: React.FC<{ event: CalendarEvent }> = ({ event }) => {
-  const startDate = event.start
-    ? new Date(event.start).toLocaleDateString("en-US", {
-        month: "short",
-        day: "numeric",
-        year: "numeric",
-      })
-    : "";
+  const formatDate = (date: Date) => {
+    return date.toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      year:
+        date.getFullYear() !== new Date().getFullYear() ? "2-digit" : undefined,
+    });
+  };
 
-  const endDate = event.end
-    ? new Date(event.end).toLocaleDateString("en-US", {
-        month: "short",
-        day: "numeric",
-        year: "numeric",
-      })
-    : "";
+  const startDate = event.start ? formatDate(new Date(event.start)) : "";
+  const endDate = event.end ? formatDate(new Date(event.end)) : "";
 
   return (
-    <div className="flex items-center mt-2 text-sm text-gray-600">
+    <div className="flex items-center mt-1.5 text-xs text-gray-600">
       <svg
         xmlns="http://www.w3.org/2000/svg"
-        className="h-4 w-4 mr-1"
+        className="h-3.5 w-3.5 mr-1 flex-shrink-0"
         fill="none"
         viewBox="0 0 24 24"
         stroke="currentColor"
@@ -164,9 +171,9 @@ const EventDateRange: React.FC<{ event: CalendarEvent }> = ({ event }) => {
           d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
         />
       </svg>
-      <span>
+      <span className="truncate">
         {startDate}
-        {endDate && ` - ${endDate}`}
+        {endDate && startDate !== endDate && ` - ${endDate}`}
       </span>
     </div>
   );
