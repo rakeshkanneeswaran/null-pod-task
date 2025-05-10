@@ -16,7 +16,7 @@ COPY . .
 
 # Go into the prisma directory and run migrations & generate
 WORKDIR /app/data-core/database
-RUN npx prisma migrate deploy && npx prisma generate 
+RUN npx prisma generate 
 
 # Back to app root directory
 WORKDIR /app
