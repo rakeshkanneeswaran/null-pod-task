@@ -2,7 +2,7 @@ import axios from 'axios';
 import dotenv from 'dotenv';
 dotenv.config();
 
-const BASE_URL = 'http://localhost:3001';
+const BASE_URL = process.env.BACKEND_URL!
 
 export type CalendarEvent = {
     id: string;
