@@ -1,21 +1,20 @@
 "use client";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import FullCalendar from "@fullcalendar/react";
 import dayGridPlugin from "@fullcalendar/daygrid";
 import timeGridPlugin from "@fullcalendar/timegrid";
-import { DateSelectArg, EventClickArg, EventApi } from "@fullcalendar/core";
 import interactionPlugin from "@fullcalendar/interaction";
+import { DateSelectArg, EventClickArg, EventApi } from "@fullcalendar/core";
 import { EventView } from "./EventView";
 import { DialogBox } from "./DialogBox";
-import { Priority } from "../types/types";
-import { SortBy } from "../types/types";
+import { EventList } from "./EventList";
+import { Priority, SortBy } from "../types/types";
 import {
   createEvent,
   updateEvent,
   getAppEvents,
   deleteEvent,
 } from "@/app/server-actions/action";
-import { EventList } from "./EventList";
 
 export default function Calendar() {
   const [currentEvents, setCurrentEvents] = useState<EventApi[]>([]);
@@ -30,93 +29,93 @@ export default function Calendar() {
   const [isLoading, setIsLoading] = useState(true);
   const [selectedEventId, setSelectedEventId] = useState<string>("");
 
-  const sortedEvents = React.useMemo(() => {
+  const sortedEvents = useMemo(() => {
     const events = [...currentEvents];
-
-    if (sortBy === "date") {
-      return events.sort((a, b) => {
-        const dateA = a.start ? new Date(a.start.toString()).getTime() : 0;
-        const dateB = b.start ? new Date(b.start.toString()).getTime() : 0;
-        return dateA - dateB;
-      });
-    } else {
-      return events.sort((a, b) => {
-        const priorityA = a.extendedProps?.priority || Priority.LOW;
-        const priorityB = b.extendedProps?.priority || Priority.LOW;
-        return priorityB - priorityA; // Higher priority first
-      });
-    }
+    return sortBy === "date"
+      ? events.sort((a, b) => {
+          const dateA = new Date(a.start?.toString() || 0).getTime();
+          const dateB = new Date(b.start?.toString() || 0).getTime();
+          return dateA - dateB;
+        })
+      : events.sort((a, b) => {
+          const priorityA = a.extendedProps?.priority || Priority.LOW;
+          const priorityB = b.extendedProps?.priority || Priority.LOW;
+          return priorityB - priorityA;
+        });
   }, [currentEvents, sortBy]);
 
   useEffect(() => {
-    const handelDragDrop = async () => {
+    const saveEvents = async () => {
       for (const event of currentEvents) {
-        const eventData = {
+        await updateEvent(event.id, {
           id: event.id,
           title: event.title,
-          start: event.start ? event.start.toISOString() : undefined,
-          end: event.end ? event.end.toISOString() : undefined,
+          start: event.start?.toISOString(),
+          end: event.end?.toISOString(),
           allDay: event.allDay,
           priority: event.extendedProps?.priority || Priority.LOW,
-        };
-
-        await updateEvent(event.id, eventData);
+        });
       }
     };
-
-    handelDragDrop();
+    saveEvents();
   }, [currentEvents]);
 
   useEffect(() => {
     const fetchEvents = async () => {
       setIsLoading(true);
-      const savedEvents = await getAppEvents();
-      console.log("Fetched events from server:", savedEvents);
-      if (savedEvents) {
-        try {
-          const parsedEvents = Array.isArray(savedEvents)
-            ? savedEvents
-            : JSON.parse(savedEvents);
-          const transformedEvents = parsedEvents.map(
-            (event: {
-              id: string;
-              title: string;
-              start: string;
-              end?: string;
-              allDay: boolean;
-              priority?: Priority;
-            }) => ({
-              ...event,
-              extendedProps: {
-                priority: event.priority ?? Priority.LOW,
-              },
-            })
-          );
-          setCurrentEvents(transformedEvents);
-        } catch (error) {
-          console.error("Failed to parse events from localStorage", error);
-        } finally {
-          setIsLoading(false);
-        }
+      try {
+        const savedEvents = await getAppEvents();
+        const parsed = Array.isArray(savedEvents)
+          ? savedEvents
+          : JSON.parse(savedEvents);
+
+        const transformed = parsed.map(
+          ({
+            id,
+            title,
+            start,
+            end,
+            allDay,
+            priority,
+          }: {
+            id: string;
+            title: string;
+            start: string;
+            end: string;
+            allDay: boolean;
+            priority?: Priority;
+          }) => ({
+            id,
+            title,
+            start,
+            end,
+            allDay,
+            extendedProps: { priority: priority ?? Priority.LOW },
+          })
+        );
+        setCurrentEvents(transformed);
+      } catch (err) {
+        console.error("Error fetching events:", err);
+      } finally {
+        setIsLoading(false);
       }
     };
-
     fetchEvents();
   }, [refreshTrigger]);
 
-  const handleDateClick = (selectedInfo: DateSelectArg) => {
-    setSelectedDate(selectedInfo);
+  const handleDateClick = (info: DateSelectArg) => {
+    setSelectedDate(info);
     setClickedEvent(null);
     setIsEditing(false);
     setEventTitle("");
     setIsDialogOpen(true);
   };
 
-  const handleEventClick = (clickInfo: EventClickArg) => {
-    setSelectedEventId(clickInfo.event.id);
-    setClickedEvent(clickInfo);
+  const handleEventClick = (info: EventClickArg) => {
+    setSelectedEventId(info.event.id);
+    setClickedEvent(info);
     setSelectedDate(null);
-    setEventTitle(clickInfo.event.title);
+    setEventTitle(info.event.title);
     setIsEditing(true);
     setIsDialogOpen(true);
   };
@@ -143,53 +142,41 @@ export default function Calendar() {
       start: selectedDate.startStr,
       end: selectedDate.endStr,
       allDay: selectedDate.allDay,
-      priority: priority,
-      extendedProps: {
-        priority: priority,
-      },
+      priority,
+      extendedProps: { priority },
     };
 
     await createEvent(newEvent);
     setRefreshTrigger((prev) => prev + 1);
-
     calendarApi.addEvent(newEvent);
     handleCloseDialog();
   };
 
   const handleUpdateEvent = async (e: React.FormEvent) => {
-    console.log("updaate event called");
     e.preventDefault();
     if (!eventTitle || !clickedEvent) return;
 
-    // Update the event in FullCalendar
     clickedEvent.event.setProp("title", eventTitle);
-    clickedEvent.event.setProp("priority", priority);
+    clickedEvent.event.setExtendedProp("priority", priority);
 
     await updateEvent(selectedEventId, {
       id: clickedEvent.event.id,
       title: eventTitle,
-      start: clickedEvent.event.start
-        ? clickedEvent.event.start.toISOString()
-        : undefined,
-      end: clickedEvent.event.end
-        ? clickedEvent.event.end.toISOString()
-        : undefined,
+      start: clickedEvent.event.start?.toISOString(),
+      end: clickedEvent.event.end?.toISOString(),
       allDay: clickedEvent.event.allDay,
-      priority: priority,
+      priority,
     });
-    // Update the event in currentEvents state
-    setCurrentEvents((prevEvents) =>
-      prevEvents.map((event) =>
-        event.id === clickedEvent.event.id
+
+    setCurrentEvents((prev) =>
+      prev.map((ev) =>
+        ev.id === clickedEvent.event.id
           ? {
-              ...event,
+              ...ev,
               title: eventTitle,
-              priority: priority,
-              extendedProps: {
-                priority: priority,
-              },
+              extendedProps: { priority },
             }
-          : event
+          : ev
       )
     );
     setSelectedEventId("");
