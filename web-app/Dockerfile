@@ -1,22 +1,29 @@
-FROM node:20-alpine3.18 AS builder
+FROM node:20-alpine3.18
+
+# Install PostgreSQL client for health checks
+RUN apk add --no-cache postgresql-client
 
 # Set working directory
 WORKDIR /app
 
-# Install pnpm using npm
-RUN npm install -g pnpm
-
-# Copy all source files
+# Copy ALL files at once (including Prisma schema)
 COPY . .
 
-# Install dependencies (with lockfile integrity check)
+# Install pnpm and Prisma CLI globally
+RUN npm install -g pnpm prisma
+
+# Install project dependencies (will run postinstall script)
 RUN pnpm install
 
+# Explicitly verify and generate Prisma client (belt-and-suspenders approach)
+WORKDIR /app/data-core/database
+RUN npx prisma generate 
 
+# Return to root directory
+WORKDIR /app
+
+# Build the application
 RUN pnpm build
 
-# Expose the necessary port (if needed)
+# Expose port
 EXPOSE 3000
-
-# Command to run the app
-CMD ["pnpm", "run", "start"]

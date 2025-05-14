@@ -1,6 +1,10 @@
 
 import dotenv from 'dotenv';
-import prisma from '../database';
+
+import { PrismaClient } from '@prisma/client';
+
+const prisma = new PrismaClient();
+
 
 dotenv.config();
 
